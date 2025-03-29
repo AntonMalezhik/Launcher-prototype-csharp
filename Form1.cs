@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -42,6 +42,14 @@ namespace LauncherPrototype
         public Form1()
         {
             InitializeComponent();
+        }
+
+        // Когда форма полностью показалась
+        private async void Form1_Shown(object sender, EventArgs e)
+        {
+
+            // Задержка проверки в МС
+            await Task.Delay(1000);
 
             // Проверка файлов при старте
             CheckAndDownloadServerFiles();
@@ -214,14 +222,8 @@ namespace LauncherPrototype
                 // Отключаем кнопку обновления
                 checkUpdatesToolStripMenuItem.Enabled = false;
 
-                // Проверка существования файла версии
-                if (!File.Exists("productversion.txt"))
-                {
-
-                    // Создаем файл, если он не существует
-                    File.Create("productversion.txt").Close();
-
-                }
+                // Проверка существования файла версии и его создание
+                if (!File.Exists("productversion.txt")) File.Create("productversion.txt").Close();
 
                 // Получаем версию продукта
                 string localVersion = File.ReadAllText("productversion.txt").Trim();
@@ -229,8 +231,11 @@ namespace LauncherPrototype
                 // Отображения версии продукта
                 GUI_labelversion.Text = localVersion;
 
+                // Уведомление пользователя
+                GUI_progesslabel.Text = "Пожалуйста подождите, идет проверка сервера на доступность...";
+
                 // Запрос на нужную папку на сервере
-                HttpWebResponse response = (HttpWebResponse)WebRequest.Create(SERVER_URL).GetResponse();
+                var response = (HttpWebResponse) await WebRequest.Create(SERVER_URL).GetResponseAsync();
 
                 // Уведомление пользователя
                 GUI_progesslabel.Text = "Сервер в сети";
@@ -320,24 +325,28 @@ namespace LauncherPrototype
                     // Включаем кнопки
                     UpdateStartButtonsState(true);
 
+                    // Включаем кнопку обновления
+                    checkUpdatesToolStripMenuItem.Enabled = Enabled;
+
                     // Выход из функции
                     return;
 
                 }
 
-                // Конец соединения
-                response.Close();
-
-            } catch (WebException ex) when ((ex.Response as HttpWebResponse)?.StatusCode == HttpStatusCode.NotFound) {
+            } catch {
 
                 // Уведомление пользователя
                 GUI_progesslabel.Text = "❌ Сервер не отвечает... Попробуйте обновиться позже";
 
-                // Закрываем ответ в случае ошибки
-                ex.Response.Close();
-
                 // Включаем кнопки
                 UpdateStartButtonsState(true);
+
+                // Включаем кнопку обновления
+                checkUpdatesToolStripMenuItem.Enabled = Enabled;
+
+                // Выходим из функции
+                return;
+
             }
         }
 
